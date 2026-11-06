@@ -7,14 +7,31 @@ from datetime import date, datetime, time
 from collections import defaultdict
 import re
 
-# === DB CONFIG ===
-DB = {
-    "host": "127.0.0.1",
-    "user": "root",
-    "password": "hamzah79",
-    "database": "keuangan_db",
-    "charset": "utf8mb4"
-}
+# === DB CONFIG AMAN - BISA DIBUKA DI HP + PASSWORD TIDAK BOCOR ===
+try:
+    DB = {
+        "host": st.secrets["mysql"]["host"],
+        "port": st.secrets["mysql"]["port"],
+        "user": st.secrets["mysql"]["user"],
+        "password": st.secrets["mysql"]["password"],
+        "database": st.secrets["mysql"]["database"],
+        "charset": "utf8mb4",
+        "ssl": {"ssl_mode": "REQUIRED"},
+        "connect_timeout": 10
+    }
+    LOGIN_USER = st.secrets["auth"]["username"]
+    LOGIN_PASS = st.secrets["auth"]["password"]
+
+  except:
+      DB = {
+          "host": "127.0.0.1",
+          "user": "root",
+          "password": "hamzah79",
+          "database": "keuangan_db",
+          "charset": "utf8mb4"
+      }
+      LOGIN_USER = "iwan"
+      LOGIN_PASS = "mgr2"
 
 # === BASE DATA ===
 SUMBER_PEMASUKAN_BASE = ["Unit 20GA", "Unit 11GF", "Unit 10GF", "Unit 08AB", "Unit 07GP", "Ongkos Kerja", "Ongkos Kerja Lembur", "Bonus", "THR", "Tips Beliin sesuatu", "Dll/ Lainnya"]
