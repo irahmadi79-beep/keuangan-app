@@ -323,14 +323,20 @@ if "rekap_data" not in st.session_state: st.session_state.rekap_data = None
 
 init_tables()
 
-# === LOGIN SIMPLE (bisa dihapus kalau tidak pakai) ===
+# === LOGIN TENGAH + ENTER + PERINGATAN SALAH ===
 if not st.session_state.logged:
-    st.title("Login Keuangan MySQL")
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if u=="admin" and p=="admin":
-            st.session_state.logged=True; st.rerun()
+    _, col_login, _ = st.columns([1, 1, 1])
+    with col_login:
+        st.title("Login Keuangan MySQL")
+        with st.form("login_form", clear_on_submit=False):
+            u = st.text_input("Username")
+            p = st.text_input("Password", type="password")
+            login_klik = st.form_submit_button("Login", use_container_width=True)
+        if login_klik:
+            if u == LOGIN_USER and p == LOGIN_PASS:
+                st.session_state.logged = True; st.rerun()
+            else:
+                st.error("Username atau Password salah, silahkan ulangi kembali")
     st.stop()
 
 # === HOME ===
