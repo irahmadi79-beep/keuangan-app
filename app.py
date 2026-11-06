@@ -21,8 +21,8 @@ try:
     }
     LOGIN_USER = st.secrets["auth"]["username"]
     LOGIN_PASS = st.secrets["auth"]["password"]
-
-  except:
+    
+except:
       DB = {
           "host": "127.0.0.1",
           "user": "root",
