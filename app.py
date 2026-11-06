@@ -198,10 +198,12 @@ def get_jenis_pengeluaran_list(custom_sumber_rows):
     merged.append("Dll/ Lainnya"); return merged
 
 def get_nom_list(custom_rows, jenis):
-    base=NOMINAL[:-1]; extras=[r[1] for r in custom_rows if r[0]==jenis]; merged=[]; seen=set()
-    for x in base+extras:
-        if x not in seen: merged.append(x); seen.add(x)
-    merged.append("Dll / Lainnya"); return merged
+    base = NOMINAL[:-1]
+    extras = [r[1] for r in custom_rows if r[0]==jenis]
+    # Gabung + buang duplikat + URUT KECIL KE BESAR pake parse_nominal
+    merged = sorted(set(base + extras), key=parse_nominal)
+    merged.append("Dll / Lainnya")
+    return merged
 
 def load_mysql():
     try:
