@@ -313,7 +313,7 @@ def buat_xlsx_rekap_bulanan(pem_rows, peng_rows, bulan_pilih, tahun_pilih):
     return bio.getvalue(), total_masuk_efektif, total_keluar, sisa_akhir, jml_masuk, jml_keluar, sisa_bulan_lalu, total_masuk_murni
 
 # === SESSION STATE INIT ===
-if "logged" not in st.session_state: st.session_state.logged = True
+if "logged" not in st.session_state: st.session_state.logged = False 
 if "page" not in st.session_state: st.session_state.page = "home"
 if "just_saved" not in st.session_state: st.session_state.just_saved = False
 if "saved_msg" not in st.session_state: st.session_state.saved_msg = ""
