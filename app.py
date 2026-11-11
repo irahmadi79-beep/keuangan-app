@@ -7,33 +7,17 @@ from datetime import date, datetime, time
 from collections import defaultdict
 import re
 from zoneinfo import ZoneInfo
-
-# === JAM JAKARTA (WIB) - server Streamlit itu UTC, jadi harus dipaksa ke Asia/Jakarta ===
-# Kalau pakai datetime.now() biasa = jam UTC, beda 7 jam, harinya bisa mundur 1 hari!
-def now_wib(): return datetime.now(ZoneInfo("Asia/Jakarta"))
+def now_wib(): return datetime.now(ZoneInfo('Asia/Jakarta'))
 def today_wib(): return now_wib().date()
 
-# === DB CONFIG AMAN - BISA DIBUKA DI HP + PASSWORD TIDAK BOCOR ===
-# WAJIB: isi Secrets di Streamlit Cloud (Manage app > Settings > Secrets) dengan isi file secrets.toml
-# File ini TIDAK boleh berisi password asli. Kalau Secrets kosong, app berhenti dengan pesan jelas, TIDAK jatuh ke 127.0.0.1
+# === DB CONFIG AMAN - pakai Secrets Streamlit, TIDAK ada password di file ini ===
 try:
-    DB = {
-        "host": st.secrets["mysql"]["host"],
-        "port": st.secrets["mysql"]["port"],
-        "user": st.secrets["mysql"]["user"],
-        "password": st.secrets["mysql"]["password"],
-        "database": st.secrets["mysql"]["database"],
-        "charset": "utf8mb4",
-        "ssl": {"ssl_mode": "REQUIRED"},
-        "connect_timeout": 10
-    }
-    LOGIN_USER = st.secrets["auth"]["username"]
-    LOGIN_PASS = st.secrets["auth"]["password"]
-except Exception as e:
-    st.error("⛔ Secrets belum diisi! Buka Manage app > Settings > Secrets di Streamlit Cloud, isi [mysql] + [auth] dari file secrets.toml, lalu Reboot. Data di Aiven aman, cuma belum tersambung.")
-    st.stop()
+    DB = {"host": st.secrets["mysql"]["host"], "port": st.secrets["mysql"]["port"], "user": st.secrets["mysql"]["user"], "password": st.secrets["mysql"]["password"], "database": st.secrets["mysql"]["database"], "charset": "utf8mb4", "ssl": {"ssl_mode": "REQUIRED"}, "connect_timeout": 10}
+    LOGIN_USER = st.secrets["auth"]["username"]; LOGIN_PASS = st.secrets["auth"]["password"]
+except Exception:
+    st.error("Secrets belum diisi! Manage app > Settings > Secrets, lalu Reboot."); st.stop()
 
-# === BASE DATA - sesuai app terakhir yang sudah rapi (A-Z, nominal kecil ke besar) ===
+# === BASE DATA ===
 SUMBER_PEMASUKAN_BASE = ["Bayar Hutang", "Bonus", "Komisi Jual Barang", "Ongkos Kerja", "Ongkos Kerja Lembur", "THR", "Tips Beliin sesuatu", "Unit 05GC", "Unit 07GP", "Unit 08AB", "Unit 10GF", "Unit 11GF", "Unit 20GA", "Dll/ Lainnya"]
 JENIS_PENGELUARAN_BASE = ["Beli Obat", "Beli Pertalite", "Beli Pertamax", "Ganti Oli Mesin & Oli Gardan", "Jajan", "Kasih ke Istri", "Makan di luar", "Parkir", "Dll/ Lainnya"]
 NOMINAL = ["Rp5.000,00", "Rp10.000,00", "Rp15.000,00", "Rp20.000,00", "Rp25.000,00", "Rp50.000,00", "Rp75.000,00", "Rp100.000,00", "Dll / Lainnya"]
@@ -169,24 +153,17 @@ def apply_beda_warna():
             });
         } catch(e) {}
     }
-    bedainBatang(); setTimeout(bedainBatang, 200); setTimeout(bedainBatang, 800); setInterval(bedainBatang, 1000);
+    bedainBatang(); setTimeout(bedainBatang, 200); setTimeout(bedainBatang, 800); 
     </script>
     """, height=0)
 
 def play_success_sound(msg="Berhasil tersimpan!"):
-    # Suara sukses: bunyi ding + suara ngomong "Berhasil tersimpan" (pakai TTS browser HP/laptop, tanpa file mp3)
-    # Catatan: di HP Chrome suara baru bunyi kalau user sudah pernah klik/tap di halaman itu (aturan browser).
     safe = str(msg).replace("✅", "").replace('"', "").replace("'", "").strip() or "Berhasil tersimpan"
     components.html(f"""
     <script>
     try {{
-        var u = new SpeechSynthesisUtterance("{safe}");
-        u.lang = "id-ID"; u.rate = 1.0;
+        var u = new SpeechSynthesisUtterance("{safe}"); u.lang = "id-ID"; u.rate = 1.0;
         window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "sine"; o.frequency.value = 880; g.gain.value = 0.15;
-        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.4);
     }} catch(e) {{}}
     </script>
     """, height=0)
@@ -218,10 +195,8 @@ def get_jenis_pengeluaran_list(custom_sumber_rows):
     merged.append("Dll/ Lainnya"); return merged
 
 def _nom_key(x):
-    s=str(x).replace("Rp", "").replace("rp", "").strip().replace(".", "").replace(",", ".")
-    try: return float(s)
-    except:
-        d=re.sub(r"[^0-9]", "", str(x)); return float(d) if d else 999999999
+    d=re.sub(r"[^0-9]", "", str(x))
+    return int(d) if d else 999999999
 
 def get_nom_list(custom_rows, jenis):
     base=NOMINAL[:-1]; extras=[r[1] for r in custom_rows if r[0]==jenis]; merged=[]; seen=set()
@@ -230,6 +205,7 @@ def get_nom_list(custom_rows, jenis):
     merged=sorted(merged, key=_nom_key)
     merged.append("Dll / Lainnya"); return merged
 
+@st.cache_data(ttl=30, show_spinner=False)
 def load_mysql():
     try:
         conn=get_conn(); cur=conn.cursor()
@@ -241,6 +217,7 @@ def load_mysql():
         conn.close(); return pem, peng, custom, custom_sumber
     except: return [], [], [], []
 
+@st.cache_data(ttl=60, show_spinner=False)
 def buat_xlsx(rows, is_masuk=True):
     try:
         from openpyxl import Workbook
@@ -279,6 +256,7 @@ def get_sisa_bulan(pem_rows, peng_rows, bulan, tahun):
         except: pass
     return total_masuk - total_keluar, total_masuk, total_keluar
 
+@st.cache_data(ttl=60, show_spinner=False)
 def buat_xlsx_rekap_bulanan(pem_rows, peng_rows, bulan_pilih, tahun_pilih):
     """
     LOGIKA BARU SESUAI REQUEST:
@@ -348,7 +326,8 @@ if "form_key" not in st.session_state: st.session_state.form_key = 0
 if "edit_lock_id" not in st.session_state: st.session_state.edit_lock_id = None
 if "rekap_data" not in st.session_state: st.session_state.rekap_data = None
 
-init_tables()
+if "tables_init" not in st.session_state:
+    init_tables(); st.session_state.tables_init = True
 
 # === LOGIN TENGAH + ENTER + PERINGATAN SALAH ===
 if not st.session_state.logged:
@@ -356,14 +335,11 @@ if not st.session_state.logged:
     with col_login:
         st.title("Login Keuangan MySQL")
         with st.form("login_form", clear_on_submit=False):
-            u = st.text_input("Username")
-            p = st.text_input("Password", type="password")
+            u = st.text_input("Username"); p = st.text_input("Password", type="password")
             login_klik = st.form_submit_button("Login", use_container_width=True)
         if login_klik:
-            if u == LOGIN_USER and p == LOGIN_PASS:
-                st.session_state.logged = True; st.rerun()
-            else:
-                st.error("Username atau Password salah, silahkan ulangi kembali")
+            if u == LOGIN_USER and p == LOGIN_PASS: st.session_state.logged = True; st.rerun()
+            else: st.error("Username atau Password salah, silahkan ulangi kembali")
     st.stop()
 
 # === HOME ===
@@ -621,6 +597,8 @@ if st.session_state.page=="dashboard":
         fig_3d_ctrl = plot_controllable_3d({"Jajan": jajan_total, "Makan di luar": makan_luar_total}, {k: v for k,v in agg_all.items() if k not in CONTROLLABLE})
         if fig_3d_ctrl:
             st.pyplot(fig_3d_ctrl, use_container_width=True)
+        else:
+            st.warning("⚠️ Grafik 3D Controllable gagal muncul! Pastikan requirements.txt ada matplotlib + numpy, lalu Reboot!")
     with cc2:
         try:
             import plotly.graph_objects as go
@@ -649,6 +627,7 @@ if st.session_state.page=="dashboard":
             fig_mpl, fig_plotly = plot_3d_bar(data_pem, "🔥 PEMASUKAN 3D - per Sumber")
             if fig_mpl: st.pyplot(fig_mpl, use_container_width=True)
             elif fig_plotly: st.plotly_chart(fig_plotly, use_container_width=True)
+            else: st.warning("⚠️ Grafik 3D Pemasukan gagal! Cek requirements.txt ada matplotlib + numpy, lalu Reboot!")
             try:
                 import plotly.express as px
                 fig = px.bar(data_pem, x="Sumber", y="Nominal", color="Sumber", title="Pemasukan per Sumber (2D)", text="Nominal"); fig.update_layout(height=400); st.plotly_chart(fig, use_container_width=True)
@@ -665,6 +644,7 @@ if st.session_state.page=="dashboard":
             fig_mpl2, fig_plotly2 = plot_3d_bar(data_peng, "🔥 PENGELUARAN 3D - per Jenis")
             if fig_mpl2: st.pyplot(fig_mpl2, use_container_width=True)
             elif fig_plotly2: st.plotly_chart(fig_plotly2, use_container_width=True)
+            else: st.warning("⚠️ Grafik 3D Pengeluaran gagal! Cek requirements.txt ada matplotlib + numpy, lalu Reboot!")
             try:
                 import plotly.express as px
                 fig = px.bar(data_peng, x="Jenis", y="Nominal", color="Jenis", title="Pengeluaran per Jenis (2D)", text="Nominal"); fig.update_layout(height=400); st.plotly_chart(fig, use_container_width=True)
@@ -692,9 +672,12 @@ def halaman(tipe):
     with n4:
         if st.button("🚪 LOGOUT 3D", use_container_width=True, key=f"h4_{tipe}"): st.session_state.logged=False; st.session_state.page="home"; st.rerun()
     nom_list = get_nom_list(custom_rows, tipe)
-    st.caption(f"🕐 Sekarang WIB: {now_wib().strftime('%A %d/%m/%Y %H:%M')} - Kalau tab sudah lama kebuka, klik Refresh dulu sebelum isi!")
+    _wib = now_wib(); _tgl_key = f"tgl_{tipe}_{st.session_state.form_key}"
+    st.caption(f"🕐 Sekarang WIB: {HARI[_wib.weekday()]} {_wib.strftime('%d/%m/%Y %H:%M')} - Kalau form masih tanggal lama, klik Refresh dulu!")
+    if _tgl_key in st.session_state and st.session_state[_tgl_key] != today_wib():
+        st.warning(f"⚠️ Form ini masih tanggal {st.session_state[_tgl_key].strftime('%d/%m/%Y')}, bukan hari ini! Klik Refresh kalau mau isi hari ini, atau biarin aja kalau mau isi tanggal lama!")
     if st.button("🔄 Refresh Hari / Tanggal / Jam Sekarang (WIB)", use_container_width=True, key=f"refresh_wib_{tipe}"):
-        st.session_state.form_key += 1; st.rerun()
+        st.cache_data.clear(); st.session_state.form_key += 1; st.rerun()
     with st.container(border=True):
         st.markdown(f"### Form {tipe.capitalize()} - Dropdown 3D")
         col_kiri, col_kanan = st.columns(2)
@@ -749,8 +732,7 @@ def halaman(tipe):
                         conn.commit(); conn.close()
                         st.session_state.just_saved=True; st.session_state.saved_msg=f"✅ {tipe.capitalize()} {final_nom} - {sumber} tersimpan!"; st.session_state.form_key+=1; st.rerun()
                     except Exception as e: st.error(f"MySQL Error: {e}")
-    pem_bawah, peng_bawah, _, _ = load_mysql()
-    datas_bawah = pem_bawah if is_masuk else peng_bawah
+    datas_bawah = pem_rows if is_masuk else peng_rows  # NGEBUT: pakai data yang sudah di-load, jangan load lagi!
     st.markdown(f"### 📊 DATA {tipe.upper()} DI BAWAH - TOTAL {len(datas_bawah)} DATA")
     if datas_bawah:
         st.metric(f"Total {tipe.capitalize()}", f"{len(datas_bawah)} data")
@@ -782,7 +764,7 @@ def halaman(tipe):
             with ec2:
                 e_sumber=sel[4]; e_sumber_custom=""
                 if is_masuk:
-                    e_sumber_list=get_sumber_list(load_mysql()[3])
+                    e_sumber_list=get_sumber_list(custom_sumber_rows)
                     try: e_s_idx=e_sumber_list.index(sel[4])
                     except: e_s_idx=len(e_sumber_list)-1; e_sumber_list.insert(-1,sel[4])
                     e_sel_sumber=st.selectbox("EDIT Sumber Pemasukan (Dropdown)", e_sumber_list, index=e_s_idx, key=f"e_sumber_sel_{tipe}_{sel[0]}")
@@ -791,7 +773,7 @@ def halaman(tipe):
                         e_sumber=e_sumber_custom.strip() if e_sumber_custom.strip() else sel[4]
                     else: e_sumber=e_sel_sumber
                 else:
-                    e_jenis_list=get_jenis_pengeluaran_list(load_mysql()[3])
+                    e_jenis_list=get_jenis_pengeluaran_list(custom_sumber_rows)
                     try: e_j_idx=e_jenis_list.index(sel[4])
                     except: e_j_idx=len(e_jenis_list)-1; e_jenis_list.insert(-1,sel[4])
                     e_sel_jenis=st.selectbox("EDIT Jenis Pengeluaran (Dropdown)", e_jenis_list, index=e_j_idx, key=f"e_sumber_sel_{tipe}_{sel[0]}")
@@ -799,7 +781,7 @@ def halaman(tipe):
                         e_sumber_custom=st.text_input("EDIT Jenis Baru - Jadi dropdown permanen!", value=sel[4] if sel[4] not in JENIS_PENGELUARAN_BASE else "", key=f"e_sumber_custom_{tipe}_{sel[0]}")
                         e_sumber=e_sumber_custom.strip() if e_sumber_custom.strip() else sel[4]
                     else: e_sumber=e_sel_jenis
-                e_nom_list=get_nom_list(load_mysql()[2], tipe)
+                e_nom_list=get_nom_list(custom_rows, tipe)
                 try: e_nom_idx=e_nom_list.index(sel[5])
                 except: e_nom_idx=0
                 e_nom_sel=st.selectbox("EDIT Nominal", e_nom_list, index=e_nom_idx, key=f"e_nom_sel_{tipe}_{sel[0]}")
