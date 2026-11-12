@@ -18,7 +18,7 @@ except Exception:
     st.error("Secrets belum diisi! Manage app > Settings > Secrets, lalu Reboot."); st.stop()
 
 # === BASE DATA ===
-SUMBER_PEMASUKAN_BASE = ["Bayar Hutang", "Bonus", "Komisi Jual Barang", "Ongkos Kerja", "Ongkos Kerja Lembur", "THR", "Tips Beliin sesuatu", "Unit 05GC", "Unit 07GP", "Unit 08AB", "Unit 10GF", "Unit 11GF", "Unit 20GA", "Dll/ Lainnya"]
+SUMBER_PEMASUKAN_BASE = ["Bayar Hutang", "Bonus", "Komisi Jual Barang", "Ongkos Kerja", "Ongkos Kerja Lembur", "THR", "Tips Beliin sesuatu", "Unit 05GC", "Unit 07GP", "Unit 10GF", "Unit 11GF", "Unit 20GA", "Dll/ Lainnya"]
 JENIS_PENGELUARAN_BASE = ["Beli Obat", "Beli Pertalite", "Beli Pertamax", "Ganti Oli Mesin & Oli Gardan", "Jajan", "Kasih ke Istri", "Makan di luar", "Parkir", "Dll/ Lainnya"]
 NOMINAL = ["Rp5.000,00", "Rp10.000,00", "Rp15.000,00", "Rp20.000,00", "Rp25.000,00", "Rp50.000,00", "Rp75.000,00", "Rp100.000,00", "Dll / Lainnya"]
 HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
